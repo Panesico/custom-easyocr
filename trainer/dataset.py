@@ -193,54 +193,87 @@ def hierarchical_dataset(root, opt, select_data='/'):
     return concatenated_dataset, dataset_log
 
 class OCRDataset(Dataset):
-
     def __init__(self, root, opt):
-
         self.root = root
         self.opt = opt
         print(root)
-        self.df = pd.read_csv(os.path.join(root,'labels.csv'), sep='^([^,]+),', engine='python', usecols=['filename', 'words'], keep_default_na=False)
+        
+        # Load CSV with proper separator and columns
+        self.df = pd.read_csv(
+            os.path.join(root, 'labels.csv'),
+            sep='^([^,]+),',
+            engine='python',
+            usecols=['filename', 'words'],
+            keep_default_na=False
+        )
+        
+        # Get initial sample count
         self.nSamples = len(self.df)
-
+        print(f"Total samples before filtering: {self.nSamples}")
+        
+        # Create filtered index list
         if self.opt.data_filtering_off:
-            self.filtered_index_list = [index + 1 for index in range(self.nSamples)]
+            # If filtering is off, use all indices
+            self.filtered_index_list = list(range(self.nSamples))
         else:
+            # Filter based on criteria
             self.filtered_index_list = []
             for index in range(self.nSamples):
-                label = self.df.at[index,'words']
                 try:
+                    label = self.df.iloc[index]['words']
+                    
+                    # Skip if label is too long
                     if len(label) > self.opt.batch_max_length:
                         continue
-                except:
-                    print(label)
-                out_of_char = f'[^{self.opt.character}]'
-                if re.search(out_of_char, label.lower()):
+                        
+                    # Skip if label contains invalid characters
+                    out_of_char = f'[^{self.opt.character}]'
+                    if re.search(out_of_char, label.lower()):
+                        continue
+                        
+                    self.filtered_index_list.append(index)
+                except Exception as e:
+                    print(f"Error processing index {index}: {str(e)}")
                     continue
-                self.filtered_index_list.append(index)
-            self.nSamples = len(self.filtered_index_list)
+        
+        # Update sample count after filtering
+        self.nSamples = len(self.filtered_index_list)
+        print(f"Total samples after filtering: {self.nSamples}")
 
     def __len__(self):
         return self.nSamples
 
     def __getitem__(self, index):
-        index = self.filtered_index_list[index]
-        img_fname = self.df.at[index,'filename']
-        img_fpath = os.path.join(self.root, img_fname)
-        label = self.df.at[index,'words']
-
-        if self.opt.rgb:
-            img = Image.open(img_fpath).convert('RGB')  # for color image
-        else:
-            img = Image.open(img_fpath).convert('L')
-
-        if not self.opt.sensitive:
-            label = label.lower()
-
-        # We only train and evaluate on alphanumerics (or pre-defined character set in train.py)
-        out_of_char = f'[^{self.opt.character}]'
-        label = re.sub(out_of_char, '', label)
-
-        return (img, label)
+        try:
+            # Get the actual index from filtered list
+            actual_index = self.filtered_index_list[index]
+            
+            # Get filename and label using iloc
+            img_fname = self.df.iloc[actual_index]['filename']
+            label = self.df.iloc[actual_index]['words']
+            
+            # Construct full image path
+            img_fpath = os.path.join(self.root, 'images', img_fname)
+            
+            # Load and convert image
+            if self.opt.rgb:
+                img = Image.open(img_fpath).convert('RGB')
+            else:
+                img = Image.open(img_fpath).convert('L')
+            
+            # Process label
+            if not self.opt.sensitive:
+                label = label.lower()
+            
+            # Filter out invalid characters
+            out_of_char = f'[^{self.opt.character}]'
+            label = re.sub(out_of_char, '', label)
+            
+            return (img, label)
+            
+        except Exception as e:
+            print(f"Error loading sample {index} (actual index {actual_index}): {str(e)}")
+            raise e
 
 class ResizeNormalize(object):
 
