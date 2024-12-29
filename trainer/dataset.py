@@ -151,11 +151,6 @@ def hierarchical_dataset(root, opt, select_data='/'):
         print(f"ERROR: Root directory {full_root_path} does not exist!")
         return None, dataset_log
     
-    # List all contents of the root directory
-    print("\nDirectory contents:")
-    for item in os.listdir(full_root_path):
-        print(f"- {item}")
-    
     print("\nTraversing directory structure:")
     for dirpath, dirnames, filenames in os.walk(root + '/'):
         print(f"\nChecking directory: {dirpath}")
