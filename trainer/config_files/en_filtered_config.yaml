@@ -2,8 +2,8 @@ number: '0123456789'
 symbol: ""
 lang_char: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 experiment_name: 'en_filtered'
-train_data: 'crnn_dataset'
-valid_data: 'crnn_dataset/val'
+train_data: 'all_data/crnn_dataset'
+valid_data: 'all_data/crnn_dataset/val'
 manualSeed: 1111
 workers: 6
 batch_size: 32 #32

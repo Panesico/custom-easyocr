@@ -10,22 +10,8 @@ from natsort import natsorted
 from PIL import Image
 import numpy as np
 from torch.utils.data import Dataset, ConcatDataset, Subset
-#from torch._utils import _accumulate
+from torch._utils import _accumulate
 import torchvision.transforms as transforms
-
-def _accumulate(iterable, fn=lambda x, y: x + y):
-    "Return running totals"
-    # _accumulate([1,2,3,4,5]) --> 1 3 6 10 15
-    # _accumulate([1,2,3,4,5], operator.mul) --> 1 2 6 24 120
-    it = iter(iterable)
-    try:
-        total = next(it)
-    except StopIteration:
-        return
-    yield total
-    for element in it:
-        total = fn(total, element)
-        yield total
 
 def contrast_grey(img):
     high = np.percentile(img, 90)
@@ -131,26 +117,59 @@ class Batch_Balanced_Dataset(object):
 def hierarchical_dataset(root, opt, select_data='/'):
     """ select_data='/' contains all sub-directory of root directory """
     dataset_list = []
-    dataset_log = f'dataset_root:    {root}\t dataset: {select_data[0]}'
+    dataset_log = f'dataset_root: {root}\t dataset: {select_data[0]}'
     print(dataset_log)
+    print(f"Looking for data in directories containing any of: {select_data}")
     dataset_log += '\n'
-    for dirpath, dirnames, filenames in os.walk(root+'/'):
+    
+    # Print the full path being searched
+    full_root_path = os.path.abspath(root + '/')
+    print(f"Full path being searched: {full_root_path}")
+    
+    # Check if the root directory exists
+    if not os.path.exists(full_root_path):
+        print(f"ERROR: Root directory {full_root_path} does not exist!")
+        return None, dataset_log
+    
+    # List all contents of the root directory
+    print("\nDirectory contents:")
+    for item in os.listdir(full_root_path):
+        print(f"- {item}")
+    
+    print("\nTraversing directory structure:")
+    for dirpath, dirnames, filenames in os.walk(root + '/'):
+        print(f"\nChecking directory: {dirpath}")
+        print(f"Contains subdirectories: {dirnames}")
+        print(f"Contains files: {len(filenames)} files")
+        
         if not dirnames:
             select_flag = False
             for selected_d in select_data:
+                print(f"Checking if '{selected_d}' is in '{dirpath}'")
                 if selected_d in dirpath:
                     select_flag = True
+                    print(f"Match found! Will process this directory")
                     break
-
+            
             if select_flag:
-                dataset = OCRDataset(dirpath, opt)
-                sub_dataset_log = f'sub-directory:\t/{os.path.relpath(dirpath, root)}\t num samples: {len(dataset)}'
-                print(sub_dataset_log)
-                dataset_log += f'{sub_dataset_log}\n'
-                dataset_list.append(dataset)
-
+                try:
+                    dataset = OCRDataset(dirpath, opt)
+                    print(f"Successfully created dataset with {len(dataset)} samples")
+                    sub_dataset_log = f'sub-directory:\t/{os.path.relpath(dirpath, root)}\t num samples: {len(dataset)}'
+                    print(sub_dataset_log)
+                    dataset_log += f'{sub_dataset_log}\n'
+                    dataset_list.append(dataset)
+                except Exception as e:
+                    print(f"Error creating dataset for {dirpath}: {str(e)}")
+    
+    print(f"\nFound {len(dataset_list)} valid datasets")
+    
+    if not dataset_list:
+        print("WARNING: No valid datasets found!")
+        print("This will cause a ConcatDataset error")
+        return None, dataset_log
+    
     concatenated_dataset = ConcatDataset(dataset_list)
-
     return concatenated_dataset, dataset_log
 
 class OCRDataset(Dataset):
