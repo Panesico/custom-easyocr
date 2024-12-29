@@ -1,5 +1,5 @@
 number: '0123456789'
-symbol: ""
+symbol: "._"
 lang_char: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 experiment_name: 'en_filtered'
 train_data: 'crnn_dataset'

@@ -107,24 +107,30 @@ class Batch_Balanced_Dataset(object):
         log.close()
 
     def get_batch(self):
+        """Get a balanced batch of data from multiple dataloaders"""
         balanced_batch_images = []
         balanced_batch_texts = []
 
         for i, data_loader_iter in enumerate(self.dataloader_iter_list):
             try:
-                image, text = data_loader_iter.next()
+                # Replace .next() with next()
+                image, text = next(data_loader_iter)
                 balanced_batch_images.append(image)
                 balanced_batch_texts += text
             except StopIteration:
+                # Reset iterator when exhausted
                 self.dataloader_iter_list[i] = iter(self.data_loader_list[i])
-                image, text = self.dataloader_iter_list[i].next()
+                # Get data from new iterator
+                image, text = next(self.dataloader_iter_list[i])
                 balanced_batch_images.append(image)
                 balanced_batch_texts += text
             except ValueError:
+                # Keep the original ValueError handling
                 pass
 
+        # Concatenate all images into a single batch
         balanced_batch_images = torch.cat(balanced_batch_images, 0)
-
+        
         return balanced_batch_images, balanced_batch_texts
 
 
