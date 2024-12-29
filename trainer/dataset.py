@@ -253,7 +253,7 @@ class OCRDataset(Dataset):
             label = self.df.iloc[actual_index]['words']
             
             # Construct full image path
-            img_fpath = os.path.join(self.root, 'images', img_fname)
+            img_fpath = os.path.join(self.root, img_fname)
             
             # Load and convert image
             if self.opt.rgb:
