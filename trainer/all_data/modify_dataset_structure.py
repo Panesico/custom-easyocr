@@ -36,7 +36,7 @@ def restructure_dataset(dataset_path):
         
         if entries:
             # Create CSV file
-            csv_path = dataset_path / f'{split}_labels.csv'
+            csv_path = dataset_path / split / 'labels.csv'
             with open(csv_path, 'w', newline='') as f:
                 writer = csv.writer(f)
                 writer.writerow(['filename', 'words'])  # Header
@@ -52,6 +52,8 @@ def restructure_dataset(dataset_path):
                 for image in source_images_dir.glob('*.jpg'):
                     shutil.copy2(image, target_images_dir / image.name)
                 print(f"Copied images for {split} split")
+        shutil.rmtree(dataset_path / split / 'images')
+        shutil.rmtree(dataset_path / split / 'labels')
 
 def main():
     # Assuming script is run from the parent directory of crnn_dataset
